@@ -1,0 +1,125 @@
+!-----------------------------------------------------------------------------------------------------------------------
+! Mesh parameters
+!-----------------------------------------------------------------------------------------------------------------------
+ Integer, Parameter :: nx=128, ny=nx, nr=32                ! Number of grid points on each face
+ Integer, Parameter :: px=2,  py=px, pr=1                  ! Number of processors in each direction for each face
+ Integer, Parameter :: mx=nx/px, my=ny/py, mr=nr/pr        ! Number of grid points per node on each face
+ Integer, Parameter :: ntheta=256,nphi=2*ntheta, nt=1, kord = 6
+
+!-----------------------------------------------------------------------------------------------------------------------
+! Finite difference scheme parameters
+!-----------------------------------------------------------------------------------------------------------------------
+ Integer, parameter :: nstencil=13                          ! Stencil size for derivatives
+ Integer, parameter :: noverlap=(nstencil-1)/2             ! Size of overlap region between cube-sphere meshes
+ Integer, parameter :: nord=6                              ! Order of interpolation at boundaries
+ 
+ Logical, Parameter :: xieta_to_thetaphi = .true.
+
+ Real*8 dxi, deta, dr 
+
+ COMMON /DERIVATIVES/ dxi, deta, dr
+
+ Real*8 coeffs1(-noverlap:noverlap)
+
+! Coefficients for central difference scheme - first derivative
+!  Parameter(coeffs1=(/-0.5D0,&                            
+!					  0.0D0,&
+!					  0.5D0/))
+!  Parameter(coeffs1=(/ 0.0D0, -0.02651995D0,&
+!        			   0.18941314D0,&
+!		        	  -0.79926643D0,&
+!		         	   0.0D0,&
+!		         	   0.79926643D0,&
+!    		          -0.18941314D0,&
+!			           0.02651995D0, 0.0D0 /))
+!-----------------------------------------------------------------------------------------------------------------------
+! Time stepping parameters
+!-----------------------------------------------------------------------------------------------------------------------
+! Explicit RK4 (Cook and Cabot)
+ Integer N_stage_rk4
+
+ Parameter(N_stage_rk4 = 5)
+
+ Real*8 alpha_rk4(N_stage_rk4), beta_rk4(N_stage_rk4), c_rk4(N_stage_rk4)
+
+ Parameter(alpha_rk4=(/ 0.0D0, -4.801594388477952D-01,&
+                        -1.404247195200064D+00,&
+                        -2.016477077503357D+00,&
+                        -1.056444269767207D+00/))
+ Parameter(beta_rk4=(/ 1.028639988104959D-01,&
+                        7.408540575766301D-01,&
+                        7.426530946683799D-01,&
+                        4.694937902357905D-01,&
+                        1.881733382887932D-01/))
+ Parameter(c_rk4=(/ 0D0, 1.028639988104959D-01,&
+                     4.879899878330192D-01,&
+                     6.885177231562036D-01,&
+                     9.023816453077341D-01/))
+
+! Simulation time and number of time steps
+ real*8 time, deltat
+
+ COMMON /TSTEP/ time, deltat 
+
+ integer nstep
+
+ COMMON /NSTEP/ nstep
+
+!-----------------------------------------------------------------------------------------------------------------------
+! Filter parameters
+!-----------------------------------------------------------------------------------------------------------------------
+ Real*8 filt_coeffs(-noverlap:noverlap), sigma_d
+
+! Coefficients for filter scheme with 9p stencil 
+!  Parameter(filt_coeffs=(/ 0.008228661760,&
+!                          -0.045211119360,&
+!                           0.120007591680,&
+!                          -0.204788880640,&
+!                           0.243527493120,&
+!                          -0.204788880640,&
+!                           0.120007591680,&
+!                          -0.045211119360,&
+!                           0.008228661760 /))
+
+
+  !Parameter(filt_coeffs=(/ 0.0D0,&
+   !                       -1.0D0/32.0D0,&
+    !                       0.0D0,&
+     !                      9.0D0/32.0D0,&
+!					       0.50D0,&	
+ !                          9.0D0/32.0D0,&
+  !                         0.0D0,&
+   !                       -1.0D0/32.0D0,&
+    !                       0.0D0/))
+                           
+
+
+ !Parameter (sigma_d = 0.1) 
+
+!-----------------------------------------------------------------------------------------------------------------------
+! Flow parameters
+!-----------------------------------------------------------------------------------------------------------------------
+ Real*8 Re, Rm
+
+ COMMON /FLOW_PARAM/ Re, Rm
+
+!-----------------------------------------------------------------------------------------------------------------------
+! Miscellaneous/Output
+!-----------------------------------------------------------------------------------------------------------------------
+ Real*8 pi
+ 
+ Parameter(pi = ACOS(-1.0D0))
+ 
+ integer cue_restart, cue_vis
+
+ COMMON /OUTPUT/ cue_restart, cue_vis 
+
+!-----------------------------------------------------------------------------------------------------------------------
+! Parallel stuff
+!-----------------------------------------------------------------------------------------------------------------------
+ integer nprocs, nvis
+
+ Common /MPI/  nprocs, nvis
+
+
+

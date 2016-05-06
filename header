@@ -1,0 +1,185 @@
+!-----------------------------------------------------------------------------------------------------------------------
+! Mesh parameters
+!-----------------------------------------------------------------------------------------------------------------------
+ Integer, Parameter :: nx=128, ny=nx, nr=400                ! Number of grid points on each face. Same in each zone.
+
+ Integer, Parameter :: px=4, py=px, pr=4                    ! Same decomposition in all 6 zones                                 
+
+ Integer, Parameter :: mx=nx/px, my=ny/py, mr=nr/pr
+
+ Integer, Parameter :: nt=480
+
+ integer zoneid, np(6)
+
+ COMMON /ZONE/ zoneid, np                                   ! Specifies which face each node is part of. Takes values between 1 & 6
+
+ real*8 rmin, rmax                                          ! Radius range
+
+ COMMON /RAD/ rmin, rmax
+!-----------------------------------------------------------------------------------------------------------------------
+! Finite difference scheme parameters
+!-----------------------------------------------------------------------------------------------------------------------
+ Integer, parameter :: nstencil=7                          ! Stencil size for derivatives
+ Integer, parameter :: noverlap=(nstencil-1)/2             ! Size of overlap region between cube-sphere meshes
+ Integer, parameter :: nord=4                              ! Order of interpolation at boundaries
+ Integer, parameter :: nst=noverlap
+ Integer, parameter :: nstr=5                              ! Radial filter 
+
+ Real*8 dxi, deta, dr, dchi 
+
+ COMMON /DERIVATIVES/ dxi, deta, dr, dchi
+
+ Real*8 coeffs1(-noverlap:noverlap)
+ Real*8 bdy_coeffs1(nst,nstencil)
+
+! Coefficients for central difference scheme - first derivative
+!  Data coeffs1 /-0.5D0,&                            
+!		 0.0D0,&
+!		 0.5D0 /
+! Coefficients for the DRP scheme (Tam and Webb, JCP 1993)
+  Data coeffs1 / -0.02651995D0,&
+        	  0.18941314D0,&
+	         -0.79926643D0,&
+		  0.0D0,&
+		  0.79926643D0,&
+    		 -0.18941314D0,&
+                  0.02651995D0 /
+
+! Boundary coefficients for the DRP scheme (Tam and Dong, TCFD 1994)
+  Data bdy_coeffs1  /-2.192280339D0, -0.209337622D0,  0.049041958D0,& 
+                      4.748611401D0, -1.084875676D0, -0.468840357D0,&
+                     -5.108851915D0,  2.147776050D0, -0.474760914D0,&
+                      4.461567104D0, -1.388928322D0,  1.273274737D0,&
+                     -2.833498741D0,  0.768949766D0, -0.518484526D0,&
+                      1.128328861D0, -0.28181465D0,   0.166138533D0,&
+                     -0.203876371D0,  0.048230454D0, -0.026369431D0 /
+
+
+!-----------------------------------------------------------------------------------------------------------------------
+! Time stepping parameters
+!-----------------------------------------------------------------------------------------------------------------------
+! Explicit RK4 (Cook and Cabot)
+ Integer N_stage_rk4
+
+ Parameter(N_stage_rk4 = 5)
+
+ Real*8 alpha_rk4(N_stage_rk4), beta_rk4(N_stage_rk4), c_rk4(N_stage_rk4)
+
+ Data alpha_rk4 / 0.0D0, -4.801594388477952D-01,&
+                 -1.404247195200064D+00,&
+                 -2.016477077503357D+00,&
+                 -1.056444269767207D+00 /
+ Data beta_rk4 / 1.028639988104959D-01,&
+                 7.408540575766301D-01,&
+                 7.426530946683799D-01,&
+                 4.694937902357905D-01,&
+                 1.881733382887932D-01 /
+ Data c_rk4 / 0D0, 1.028639988104959D-01,&
+              4.879899878330192D-01,&
+              6.885177231562036D-01,&
+              9.023816453077341D-01 /
+
+! Simulation time and number of time steps
+ real*8 time, deltat
+
+ COMMON /TSTEP/ time, deltat 
+
+ integer step, nstep
+
+ COMMON /NSTEP/ step, nstep
+
+!-----------------------------------------------------------------------------------------------------------------------
+! Filter parameters
+!-----------------------------------------------------------------------------------------------------------------------
+ Real*8 filt_coeffs(-noverlap:noverlap), sigma_d
+ Real*8 filt_coeffs_r(-nstr:nstr)
+ Real*8 bdy_filt_coeffs(nst,4)
+
+! Coefficients for linearly constrained discrete filter (Vasilyev, Lund & Moin, JCP 1998)
+ Data filt_coeffs / 0.015625D0,&
+                    -0.09375D0,&
+                    0.234375D0,&
+                      0.6875D0,&	
+                    0.234375D0,&
+                    -0.09375D0,&
+                    0.015625D0 /
+
+! Coefficients for 6th order explicit filter(Bogey & Bailly, JCP 2007)
+! Data filt_coeffs / -0.03125D0,&
+!                     0.0D0,&
+!                     0.28125D0,&
+!                     0.50D0,&	
+!                     0.28125D0,&
+!                     0.0D0,&
+!                    -0.03125D0 /
+
+! Boundary coefficients for the filter
+  Data bdy_filt_coeffs / 1.0D0, 0.5D0, 0.0D0,&
+                         0.0D0, 1.0D0, 0.5D0,&
+                         0.0D0, 0.5D0, 1.0D0,&
+                         0.0d0, 0.0D0, 0.5D0 / 
+
+! Coefficients for radial filter (Hanasoge & Duvall, Astron. Nachr. 2007)
+  Data filt_coeffs_r / 0.0009765D0,&
+                      -0.0097655D0,&
+                       0.043945D0,&
+                      -0.1171875D0,&
+                       0.2050775D0,&
+                       0.753906D0,&
+                       0.2050775D0,&
+                      -0.1171875D0,&
+                       0.043945D0,&
+                      -0.0097655D0,&
+                       0.0009765D0 / 
+
+ Parameter (sigma_d = 0.1) 
+!-----------------------------------------------------------------------------------------------------------------------
+! Flow parameters
+!-----------------------------------------------------------------------------------------------------------------------
+ Real*8 Re, Rm
+
+ COMMON /FLOW_PARAM/ Re, Rm
+
+!-----------------------------------------------------------------------------------------------------------------------
+! Miscellaneous/Output 
+!-----------------------------------------------------------------------------------------------------------------------
+ Real*8 pi 
+
+ Parameter(pi = ACOS(-1.0D0))
+
+ integer cue_restart, cue_vis
+
+ COMMON /OUT/ cue_restart, cue_vis
+
+!-----------------------------------------------------------------------------------------------------------------------
+! MPI stuff
+!-----------------------------------------------------------------------------------------------------------------------
+ integer :: rank, zonerank, xrank, yrank, rrank, mpi_size, nprocs
+ integer :: source_left_x, dest_left_x, source_right_x, dest_right_x
+ integer :: source_left_y, dest_left_y, source_right_y, dest_right_y
+ integer :: source_left_r, dest_left_r, source_right_r, dest_right_r
+ integer :: MPI_XYR_COMM, MPI_X_COMM, MPI_Y_COMM, MPI_R_COMM
+
+ Common /MPI/ rank, zonerank, xrank, yrank, rrank, mpi_size, nprocs,&
+              source_left_x, dest_left_x, source_right_x,&
+              dest_right_x, source_left_y, dest_left_y,&
+              source_right_y, dest_right_y, source_left_r,&
+              dest_left_r, source_right_r, dest_right_r,&
+              MPI_XYR_COMM, MPI_X_COMM, MPI_Y_COMM,&
+              MPI_R_COMM
+
+ integer :: MPI_COMM_ZONE, MPI_INTERCOMM(6,6)
+
+ integer :: icom_source_left_x, icom_dest_left_x, icom_source_right_x, icom_dest_right_x
+ integer :: icom_source_left_y, icom_dest_left_y, icom_source_right_y, icom_dest_right_y
+ integer :: icom_source_left_r, icom_dest_left_r, icom_source_right_r, icom_dest_right_r
+
+
+
+ Common /INTERCOMM/ MPI_COMM_ZONE, MPI_INTERCOMM, &
+                    icom_source_left_x, icom_dest_left_x, icom_source_right_x, icom_dest_right_x, &
+                    icom_source_left_y, icom_dest_left_y, icom_source_right_y, icom_dest_right_y, &
+                    icom_source_left_r, icom_dest_left_r, icom_source_right_r, icom_dest_right_r
+ 
+
+
